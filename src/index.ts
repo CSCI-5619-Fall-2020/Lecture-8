@@ -10,16 +10,18 @@ import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight" 
 import { AssetsManager } from "@babylonjs/core/Misc/assetsManager"
-import { PointerEventTypes, PointerInfo } from "@babylonjs/core/Events/pointerEvents";
-import { WebXRControllerComponent } from "@babylonjs/core/XR/motionController/webXRControllerComponent";
+import { WebXRControllerComponent } from "@babylonjs/core/XR/motionController/webXRControllercomponent";
 import { WebXRInputSource } from "@babylonjs/core/XR/webXRInputSource";
 import { WebXRCamera } from "@babylonjs/core/XR/webXRCamera";
-import { Logger } from "@babylonjs/core";
+import { Logger } from "@babylonjs/core/Misc/logger";
+import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+//import { CannonJSPlugin } from "@babylonjs/core/Physics/Plugins/cannonJSPlugin"
+//import { PhysicsImpostor } from "@babylonjs/core/Physics/physicsImpostor";
 
 // Side effects
 import "@babylonjs/loaders/glTF/2.0/glTFLoader"
 import "@babylonjs/core/Helpers/sceneHelpers";
-//import "@babylonjs/core/XR/webXRInput"
+//import "@babylonjs/core/Physics/physicsEnginecomponent"
 
 // Import debug layer
 import "@babylonjs/inspector"
@@ -38,6 +40,9 @@ class Game
     private leftController: WebXRInputSource | null;
     private rightController: WebXRInputSource | null;
     private xrCamera: WebXRCamera | null; 
+    
+    private grabbableObjects: Array<AbstractMesh>;
+    private rightGrabbedObject: AbstractMesh | null;
 
     constructor()
     {
@@ -53,6 +58,9 @@ class Game
         this.leftController = null;
         this.rightController = null;
         this.xrCamera = null;
+
+        this.grabbableObjects = [];
+        this.rightGrabbedObject = null;
     }
 
     start() : void 
@@ -62,6 +70,7 @@ class Game
 
             // Register a render loop to repeatedly render the scene
             this.engine.runRenderLoop(() => { 
+                this.update();
                 this.scene.render();
             });
 
@@ -97,6 +106,11 @@ class Game
             skyboxColor: new Color3(.059, .663, .80)
         });
 
+        // Enable physics engine
+        //var physicsPlugin = new CannonJSPlugin();
+        //var gravityVector = new Vector3(0,-9.81, 0);
+        //this.scene.enablePhysics(gravityVector, physicsPlugin);
+
         // Creates the XR experience helper
         const xrHelper = await this.scene.createDefaultXRExperienceAsync({});
 
@@ -110,25 +124,11 @@ class Game
         // Register event handlers for button presses
         xrHelper.input.onControllerAddedObservable.add((inputSource) => {
             inputSource.onMotionControllerInitObservable.add((motionController) => {
-                if(inputSource.uniqueId.endsWith("left"))
-                {
+                if(inputSource.uniqueId.endsWith("left")) {
                     this.leftController = inputSource;
-                    motionController.getComponent("xr-standard-trigger").onButtonStateChangedObservable.add(this.onLeftTrigger); 
-                    motionController.getComponent("xr-standard-squeeze").onButtonStateChangedObservable.add(this.onLeftSqueeze);
-                    motionController.getComponent("xr-standard-thumbstick").onButtonStateChangedObservable.add(this.onLeftThumbstick);  
-                    motionController.getComponent("x-button").onButtonStateChangedObservable.add(this.onLeftX); 
-                    motionController.getComponent("y-button").onButtonStateChangedObservable.add(this.onLeftY); 
-                    motionController.getComponent("xr-standard-thumbstick").onAxisValueChangedObservable.add(this.onLeftThumbstickAxis);         
                 }
-                else
-                {
-                    this.rightController = inputSource;
-                    motionController.getComponent("xr-standard-trigger").onButtonStateChangedObservable.add(this.onRightTrigger); 
-                    motionController.getComponent("xr-standard-squeeze").onButtonStateChangedObservable.add(this.onRightSqueeze); 
-                    motionController.getComponent("xr-standard-thumbstick").onButtonStateChangedObservable.add(this.onRightThumbstick); 
-                    motionController.getComponent("a-button").onButtonStateChangedObservable.add(this.onRightA); 
-                    motionController.getComponent("b-button").onButtonStateChangedObservable.add(this.onRightB);
-                    motionController.getComponent("xr-standard-thumbstick").onAxisValueChangedObservable.add(this.onRightThumbstickAxis) ;         
+                else {
+                    this.rightController = inputSource;         
                 }
             });
         });
@@ -149,10 +149,16 @@ class Game
         // This will execute when all assets are loaded
         assetsManager.onFinish = (tasks) => {
 
-            // Add the floor meshes to the teleporter
+            // Search through the loaded meshes
             worldTask.loadedMeshes.forEach((mesh) => {
+                // Add the floor meshes to the teleporter
                 if(mesh.name.startsWith("rpgpp_lt_terrain")) {
                     xrHelper.teleportation.addFloorMesh(mesh);
+                }
+
+                // Add only the mesh in the props group as grabbables
+                if(mesh.parent?.name == "Props") {
+                    this.grabbableObjects.push(mesh);
                 }
             });
             
@@ -162,11 +168,34 @@ class Game
     
     }
 
-    private onLeftTrigger(component: WebXRControllerComponent)
+    // The main update loop will be executed once per frame before the scene is rendered
+    private update() : void
+    {
+        // Polling for controller input
+        this.processControllerInput();
+    }
+
+    // Process event handlers for controller input
+    private processControllerInput()
+    {
+        this.onLeftTrigger(this.leftController?.motionController?.getComponent("xr-standard-trigger"));
+        this.onLeftSqueeze(this.leftController?.motionController?.getComponent("xr-standard-squeeze"));
+        this.onLeftThumbstick(this.leftController?.motionController?.getComponent("xr-standard-thumbstick"));
+        this.onLeftX(this.leftController?.motionController?.getComponent("x-button"));
+        this.onLeftY(this.leftController?.motionController?.getComponent("y-button"));
+
+        this.onRightTrigger(this.rightController?.motionController?.getComponent("xr-standard-trigger"));
+        this.onRightSqueeze(this.rightController?.motionController?.getComponent("xr-standard-squeeze"));
+        this.onRightThumbstick(this.rightController?.motionController?.getComponent("xr-standard-thumbstick"));
+        this.onRightA(this.rightController?.motionController?.getComponent("a-button"));
+        this.onRightB(this.rightController?.motionController?.getComponent("b-button"));
+    }
+
+    private onLeftTrigger(component?: WebXRControllerComponent)
     {  
-        if(component.changes.pressed)
+        if(component?.changes.pressed)
         {
-            if(component.pressed)
+            if(component?.pressed)
             {
                 Logger.Log("left trigger pressed");
             }
@@ -177,11 +206,11 @@ class Game
         }     
     }
 
-    private onLeftSqueeze(component: WebXRControllerComponent)
+    private onLeftSqueeze(component?: WebXRControllerComponent)
     {  
-        if(component.changes.pressed)
+        if(component?.changes.pressed)
         {
-            if(component.pressed)
+            if(component?.pressed)
             {
                 Logger.Log("left squeeze pressed");
             }
@@ -192,11 +221,11 @@ class Game
         }  
     }
 
-    private onLeftX(component: WebXRControllerComponent)
+    private onLeftX(component?: WebXRControllerComponent)
     {  
-        if(component.changes.pressed)
+        if(component?.changes.pressed)
         {
-            if(component.pressed)
+            if(component?.pressed)
             {
                 Logger.Log("left X pressed");
             }
@@ -207,11 +236,11 @@ class Game
         }  
     }
 
-    private onLeftY(component: WebXRControllerComponent)
+    private onLeftY(component?: WebXRControllerComponent)
     {  
-        if(component.changes.pressed)
+        if(component?.changes.pressed)
         {
-            if(component.pressed)
+            if(component?.pressed)
             {
                 Logger.Log("left Y pressed");
             }
@@ -222,11 +251,11 @@ class Game
         }  
     }
 
-    private onLeftThumbstick(component: WebXRControllerComponent)
+    private onLeftThumbstick(component?: WebXRControllerComponent)
     {   
-        if(component.changes.pressed)
+        if(component?.changes.pressed)
         {
-            if(component.pressed)
+            if(component?.pressed)
             {
                 Logger.Log("left thumbstick pressed");
             }
@@ -235,18 +264,18 @@ class Game
                 Logger.Log("left thumbstick released");
             }
         }  
-    }
 
-    private onLeftThumbstickAxis(eventData: {x: number, y: number})
-    {  
-        Logger.Log("left thumbstick axis: (" + eventData.x + "," + eventData.y + ")");
-    }
-
-    private onRightTrigger(component: WebXRControllerComponent)
-    {  
-        if(component.changes.pressed)
+        if(component?.changes.axes)
         {
-            if(component.pressed)
+            Logger.Log("left thumbstick axes: (" + component.axes.x + "," + component.axes.y + ")");
+        }
+    }
+
+    private onRightTrigger(component?: WebXRControllerComponent)
+    {  
+        if(component?.changes.pressed)
+        {
+            if(component?.pressed)
             {
                 Logger.Log("right trigger pressed");
             }
@@ -257,26 +286,41 @@ class Game
         }  
     }
 
-    private onRightSqueeze(component: WebXRControllerComponent)
+    private onRightSqueeze(component?: WebXRControllerComponent)
     {  
-        if(component.changes.pressed)
+        if(component?.changes.pressed)
         {
-            if(component.pressed)
+            if(component?.pressed)
             {
                 Logger.Log("right squeeze pressed");
+
+                for(var i = 0; i < this.grabbableObjects.length && !this.rightGrabbedObject; i++)
+                {
+                    if(this.rightController!.grip!.intersectsMesh(this.grabbableObjects[i], true))
+                    {
+                        this.rightGrabbedObject = this.grabbableObjects[i];
+                        this.rightGrabbedObject.setParent(this.rightController!.grip!);
+                    }
+                }
             }
             else
             {
                 Logger.Log("right squeeze released");
+
+                if(this.rightGrabbedObject)
+                {
+                    this.rightGrabbedObject.setParent(null);
+                    this.rightGrabbedObject = null;
+                }
             }
         }  
     }
 
-    private onRightA(component: WebXRControllerComponent)
+    private onRightA(component?: WebXRControllerComponent)
     {  
-        if(component.changes.pressed)
+        if(component?.changes.pressed)
         {
-            if(component.pressed)
+            if(component?.pressed)
             {
                 Logger.Log("right A pressed");
             }
@@ -287,11 +331,11 @@ class Game
         }  
     }
 
-    private onRightB(component: WebXRControllerComponent)
+    private onRightB(component?: WebXRControllerComponent)
     {  
-        if(component.changes.pressed)
+        if(component?.changes.pressed)
         {
-            if(component.pressed)
+            if(component?.pressed)
             {
                 Logger.Log("right B pressed");
             }
@@ -302,11 +346,11 @@ class Game
         }  
     }
 
-    private onRightThumbstick(component: WebXRControllerComponent)
+    private onRightThumbstick(component?: WebXRControllerComponent)
     {  
-        if(component.changes.pressed)
+        if(component?.changes.pressed)
         {
-            if(component.pressed)
+            if(component?.pressed)
             {
                 Logger.Log("right thumbstick pressed");
             }
@@ -315,12 +359,13 @@ class Game
                 Logger.Log("right thumbstick released");
             }
         }  
+
+        if(component?.changes.axes)
+        {
+            Logger.Log("right thumbstick axes: (" + component.axes.x + "," + component.axes.y + ")");
+        }
     }  
     
-    private onRightThumbstickAxis(eventData: {x: number, y: number})
-    {  
-        Logger.Log("right thumbstick axis: (" + eventData.x + "," + eventData.y + ")");
-    }
 }
 /******* End of the Game class ******/   
 

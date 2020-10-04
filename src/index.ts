@@ -106,31 +106,29 @@ class Game
         // There is a bug in Babylon 4.1 that fails to reenable pointer selection after a teleport
         // This is a hacky workaround that disables a different unused feature instead
         xrHelper.teleportation.setSelectionFeature(xrHelper.baseExperience.featuresManager.getEnabledFeature("xr-background-remover"));
-
+       
         // Register event handlers for button presses
         xrHelper.input.onControllerAddedObservable.add((inputSource) => {
             inputSource.onMotionControllerInitObservable.add((motionController) => {
-                switch (inputSource.uniqueId)
+                if(inputSource.uniqueId.endsWith("left"))
                 {
-                    case "controller-1-tracked-pointer-left":
-                        this.leftController = inputSource;
-                        motionController.getComponent("xr-standard-trigger").onButtonStateChangedObservable.add(this.onLeftTrigger); 
-                        motionController.getComponent("xr-standard-squeeze").onButtonStateChangedObservable.add(this.onLeftSqueeze);
-                        motionController.getComponent("xr-standard-thumbstick").onButtonStateChangedObservable.add(this.onLeftThumbstick);  
-                        motionController.getComponent("x-button").onButtonStateChangedObservable.add(this.onLeftX); 
-                        motionController.getComponent("y-button").onButtonStateChangedObservable.add(this.onLeftY); 
-                        motionController.getComponent("xr-standard-thumbstick").onAxisValueChangedObservable.add(this.onLeftThumbstickAxis)
-                        break;
-
-                    case "controller-0-tracked-pointer-right":
-                        this.rightController = inputSource;
-                        motionController.getComponent("xr-standard-trigger").onButtonStateChangedObservable.add(this.onRightTrigger); 
-                        motionController.getComponent("xr-standard-squeeze").onButtonStateChangedObservable.add(this.onRightSqueeze); 
-                        motionController.getComponent("xr-standard-thumbstick").onButtonStateChangedObservable.add(this.onRightThumbstick); 
-                        motionController.getComponent("a-button").onButtonStateChangedObservable.add(this.onRightA); 
-                        motionController.getComponent("b-button").onButtonStateChangedObservable.add(this.onRightB);
-                        motionController.getComponent("xr-standard-thumbstick").onAxisValueChangedObservable.add(this.onRightThumbstickAxis)
-                        break;
+                    this.leftController = inputSource;
+                    motionController.getComponent("xr-standard-trigger").onButtonStateChangedObservable.add(this.onLeftTrigger); 
+                    motionController.getComponent("xr-standard-squeeze").onButtonStateChangedObservable.add(this.onLeftSqueeze);
+                    motionController.getComponent("xr-standard-thumbstick").onButtonStateChangedObservable.add(this.onLeftThumbstick);  
+                    motionController.getComponent("x-button").onButtonStateChangedObservable.add(this.onLeftX); 
+                    motionController.getComponent("y-button").onButtonStateChangedObservable.add(this.onLeftY); 
+                    motionController.getComponent("xr-standard-thumbstick").onAxisValueChangedObservable.add(this.onLeftThumbstickAxis);         
+                }
+                else
+                {
+                    this.rightController = inputSource;
+                    motionController.getComponent("xr-standard-trigger").onButtonStateChangedObservable.add(this.onRightTrigger); 
+                    motionController.getComponent("xr-standard-squeeze").onButtonStateChangedObservable.add(this.onRightSqueeze); 
+                    motionController.getComponent("xr-standard-thumbstick").onButtonStateChangedObservable.add(this.onRightThumbstick); 
+                    motionController.getComponent("a-button").onButtonStateChangedObservable.add(this.onRightA); 
+                    motionController.getComponent("b-button").onButtonStateChangedObservable.add(this.onRightB);
+                    motionController.getComponent("xr-standard-thumbstick").onAxisValueChangedObservable.add(this.onRightThumbstickAxis) ;         
                 }
             });
         });
@@ -159,7 +157,7 @@ class Game
             });
             
             // Show the debug layer
-            //this.scene.debugLayer.show();
+            this.scene.debugLayer.show();
         };  
     
     }

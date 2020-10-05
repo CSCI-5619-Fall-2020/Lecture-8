@@ -1,16 +1,17 @@
-# Lecture 8: TBD
+# Lecture 8: Interaction and Physics
 
 ## Topics
 
-1. New WebXR emulator
-2. Reading controller input
-3. Debugging on the quest
-4. Grabbing objects
-5. Physics
+1. How to use my custom version of the [WebXR emulator](https://github.com/illusioneering/WebXR-emulator-extension)
+2. Including an update() function in the main loop
+3. Reading controller input using polling
+4. Viewing the debug console on the Quest
+5. Grabbing objects with the controllers
+6. Using a physics engine
 
 ## Participation Exercise
 
-TBD
+Add the code for grabbing objects with your left controller.  This will involve adding a `leftGrabbedObject` and then copying and pasting the code from the right hand.  You can submit your `index.ts` file on Canvas, or alternatively you can submit a screenshot of you grabbing an object with the left controller.
 
 ## License
 

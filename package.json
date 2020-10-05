@@ -6,7 +6,8 @@
     "dependencies": {
         "@babylonjs/core": "^4.1",
         "@babylonjs/materials": "^4.1",
-        "@babylonjs/inspector": "^4.1"
+        "@babylonjs/inspector": "^4.1",
+        "oimo": "^1.0.9"
     },
     "devDependencies": {
         "@typescript-eslint/eslint-plugin": "^2.30.0",

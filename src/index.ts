@@ -17,8 +17,10 @@ import { Logger } from "@babylonjs/core/Misc/logger";
 import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 
 // Physics
-import * as Oimo from "oimo"
-import { OimoJSPlugin } from "@babylonjs/core/Physics/Plugins/oimoJSPlugin";
+import * as Cannon from "cannon"
+import { CannonJSPlugin } from "@babylonjs/core/Physics/Plugins/cannonJSPlugin";
+//import * as Oimo from "oimo"
+//import { OimoJSPlugin } from "@babylonjs/core/Physics/Plugins/oimoJSPlugin";
 import { PhysicsImpostor } from "@babylonjs/core/Physics/physicsImpostor";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 
@@ -28,6 +30,8 @@ import "@babylonjs/core/Helpers/sceneHelpers";
 
 // Import debug layer
 import "@babylonjs/inspector";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 
 // Note: The structure has changed since previous assignments because we need to handle the 
 // async methods used for setting up XR. In particular, "createDefaultXRExperienceAsync" 
@@ -40,12 +44,13 @@ class Game
     private canvas: HTMLCanvasElement;
     private engine: Engine;
     private scene: Scene;
+
+    private xrCamera: WebXRCamera | null; 
     private leftController: WebXRInputSource | null;
     private rightController: WebXRInputSource | null;
-    private xrCamera: WebXRCamera | null; 
     
-    private grabbableObjects: Array<AbstractMesh>;
     private rightGrabbedObject: AbstractMesh | null;
+    private grabbableObjects: Array<AbstractMesh>;
 
     constructor()
     {
@@ -58,12 +63,12 @@ class Game
         // Creates a basic Babylon Scene object
         this.scene = new Scene(this.engine);   
 
+        this.xrCamera = null;
         this.leftController = null;
         this.rightController = null;
-        this.xrCamera = null;
-
-        this.grabbableObjects = [];
+        
         this.rightGrabbedObject = null;
+        this.grabbableObjects = [];
     }
 
     start() : void 
@@ -121,7 +126,8 @@ class Game
         xrHelper.teleportation.setSelectionFeature(xrHelper.baseExperience.featuresManager.getEnabledFeature("xr-background-remover"));
        
         // Enable physics engine
-        this.scene.enablePhysics(new Vector3(0,-9.81, 0), new OimoJSPlugin(undefined, Oimo));
+        //this.scene.enablePhysics(new Vector3(0,-9.81, 0), new OimoJSPlugin(undefined, Oimo));
+        this.scene.enablePhysics(new Vector3(0,-9.81, 0), new CannonJSPlugin(undefined, undefined, Cannon));
         
         // Create an invisible ground for physics collisions and teleportation
         xrHelper.teleportation.addFloorMesh(environment!.ground!);
@@ -133,21 +139,14 @@ class Game
 
         xrHelper.input.onControllerAddedObservable.add((inputSource) => {
 
-            if(inputSource.uniqueId.endsWith("left")) {
+            if(inputSource.uniqueId.endsWith("left")) 
+            {
                 this.leftController = inputSource;
             }
-            else {
-                this.rightController = inputSource;         
-            }
-
-            /*
-            inputSource.onMotionControllerInitObservable.add((motionController) => {
-                motionController.onModelLoadedObservable.add((controller) => {
-                    controller.rootMesh!.physicsImpostor = new PhysicsImpostor(controller.rootMesh!, PhysicsImpostor.BoxImpostor,
-                                                                { mass: 1, friction: 0.5, restitution: 0.7 }, this.scene);
-                });  
-            })
-            */
+            else 
+            {
+                this.rightController = inputSource;
+            }  
         });
 
         // The assets manager can be used to load multiple assets
@@ -158,6 +157,8 @@ class Game
         worldTask.onSuccess = (task) => {
             worldTask.loadedMeshes[0].name = "world";
             worldTask.loadedMeshes[0].position = new Vector3(0, 0.5, 0);
+            worldTask.loadedMeshes[0].rotation = Vector3.Zero();
+            worldTask.loadedMeshes[0].scaling = Vector3.One();
         }
         
         // This loads all the assets and displays a loading screen
@@ -179,9 +180,9 @@ class Game
                 // Add only the mesh in the props group as grabbables
                 else if(mesh.parent?.name == "Props") {
                     this.grabbableObjects.push(mesh);
-                    mesh.setParent(null);   
-                    mesh.physicsImpostor = new PhysicsImpostor(mesh, PhysicsImpostor.BoxImpostor,
-                        {mass: 1}, this.scene);
+                    mesh.setParent(null);
+                    mesh.physicsImpostor = new PhysicsImpostor(mesh, PhysicsImpostor.BoxImpostor, {mass: 1}, this.scene);
+                    mesh.physicsImpostor.sleep();
                 }  
             });
 
@@ -195,7 +196,7 @@ class Game
     private update() : void
     {
         // Polling for controller input
-        this.processControllerInput();
+        this.processControllerInput();  
     }
 
     // Process event handlers for controller input
@@ -322,7 +323,7 @@ class Game
                     if(this.rightController!.grip!.intersectsMesh(this.grabbableObjects[i], true))
                     {
                         this.rightGrabbedObject = this.grabbableObjects[i];
-                        this.rightGrabbedObject.physicsImpostor?.dispose();
+                        this.rightGrabbedObject.physicsImpostor?.sleep();
                         this.rightGrabbedObject.setParent(this.rightController!.grip!);
                     }
                 }
@@ -334,8 +335,7 @@ class Game
                 if(this.rightGrabbedObject)
                 {
                     this.rightGrabbedObject.setParent(null);
-                    this.rightGrabbedObject.physicsImpostor = new PhysicsImpostor(this.rightGrabbedObject, PhysicsImpostor.BoxImpostor,
-                        {mass: 1}, this.scene);
+                    this.rightGrabbedObject.physicsImpostor?.wakeUp();
                     this.rightGrabbedObject = null;
                 }
             }

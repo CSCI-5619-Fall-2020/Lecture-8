@@ -12,8 +12,7 @@
         "skipLibCheck": true,
 		"preserveConstEnums":true,
 		"sourceMap": true,
-		"watch": false,
-		"noImplicitAny": false
+		"watch": false
 	},
 	"files": [
 		"src/index.ts"

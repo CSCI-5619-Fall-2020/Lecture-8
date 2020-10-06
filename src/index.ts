@@ -19,8 +19,6 @@ import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 // Physics
 import * as Cannon from "cannon"
 import { CannonJSPlugin } from "@babylonjs/core/Physics/Plugins/cannonJSPlugin";
-//import * as Oimo from "oimo"
-//import { OimoJSPlugin } from "@babylonjs/core/Physics/Plugins/oimoJSPlugin";
 import { PhysicsImpostor } from "@babylonjs/core/Physics/physicsImpostor";
 import "@babylonjs/core/Physics/physicsEngineComponent";
 
@@ -126,7 +124,6 @@ class Game
         xrHelper.teleportation.setSelectionFeature(xrHelper.baseExperience.featuresManager.getEnabledFeature("xr-background-remover"));
        
         // Enable physics engine
-        //this.scene.enablePhysics(new Vector3(0,-9.81, 0), new OimoJSPlugin(undefined, Oimo));
         this.scene.enablePhysics(new Vector3(0,-9.81, 0), new CannonJSPlugin(undefined, undefined, Cannon));
         
         // Create an invisible ground for physics collisions and teleportation

@@ -1,7 +1,7 @@
 #!/bin/sh
 
-USER="suma"
-MACHINE="csel-kh1250-02.cselabs.umn.edu"
+USER="your_user_name"
+MACHINE="any_CSE_Labs_Linux_machine"
 DIRECTORY=".www/Lecture-8/"
 
 rm -rf dist/assets

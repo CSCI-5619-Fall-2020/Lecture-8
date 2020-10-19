@@ -1,5 +1,7 @@
 # Lecture 8: Interaction and Physics
 
+Detailed explanation of this code can be found in the lecture [video](https://mediaspace.umn.edu/media/1_mv875tn2).
+
 ## Topics
 
 1. How to use my custom version of the [WebXR emulator](https://github.com/illusioneering/WebXR-emulator-extension)
